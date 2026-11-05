@@ -1,0 +1,22 @@
+name: Release
+
+# Push a tag like v0.1.0 (matching Version in client.go) to release; this also asks the Go module
+# proxy to fetch it so pkg.go.dev lists the new version right away.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches Version
+        run: grep -q "const Version = \"${GITHUB_REF_NAME#v}\"" client.go || { echo "tag $GITHUB_REF_NAME does not match Version in client.go"; exit 1; }
+      - run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: curl -fsS "https://proxy.golang.org/github.com/!tok!port/tokport-go/@v/$GITHUB_REF_NAME.info"
